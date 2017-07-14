@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.github.amihalik.rya.mongo.debugging;
+package com.github.amihalik.rya.mongo.debugging.loaddata;
 
 import java.io.File;
 
@@ -28,6 +28,8 @@ import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.Rio;
 import org.openrdf.rio.helpers.RDFHandlerBase;
 import org.openrdf.rio.helpers.RDFHandlerWrapper;
+
+import com.github.amihalik.rya.mongo.debugging.RyaUtil;
 
 /**
  * Uses the sail layer to load a N3 file.  Prints out the loading progress to the log.

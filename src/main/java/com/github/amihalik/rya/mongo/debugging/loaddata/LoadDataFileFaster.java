@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.github.amihalik.rya.mongo.debugging;
+package com.github.amihalik.rya.mongo.debugging.loaddata;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -34,15 +34,23 @@ import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.Rio;
 import org.openrdf.rio.helpers.RDFHandlerBase;
 
+import com.github.amihalik.rya.mongo.debugging.RyaUtil;
 import com.mongodb.MongoClient;
 
 /**
- * Uses the DAO layer to load a N3 file.
+ * Uses the DAO layer to load a N3 file. Two issues with using the DAO:
+ * 
+ * (1) It's a bit more complicated to set up the DAO and this "batch" loading
+ * method
+ * 
+ * (2) The DAO has bad error handling. Basically, if there is an error inserting
+ * one triple, the entire load may break.
+ * 
+ * However, this seems to be significantly faster. I'm getting 10k trip/sec
+ * using the DAO and 2k trip/sec using the sail layer.
  */
 public class LoadDataFileFaster {
     private static final Logger log = Logger.getLogger(LoadDataFileFaster.class);
-
-
 
     public static void main(String[] args) throws Exception {
         log.info("Opening Connection to Rya");
@@ -53,14 +61,14 @@ public class LoadDataFileFaster {
         MongoDBRyaDAO dao = new MongoDBRyaDAO(config, client);
         dao.init();
         log.info("Done Opening Connection to Rya");
-        
+
         log.info("Starting loading data into Rya");
         RDFParser fileParser = Rio.createParser(RDFFormat.N3);
-        
+
         fileParser.setRDFHandler(new RDFHandlerBase() {
-            
+
             List<RyaStatement> statements = new ArrayList<>();
-            
+
             @Override
             public void handleStatement(Statement st) throws RDFHandlerException {
                 statements.add(RdfToRyaConversions.convertStatement(st));
@@ -68,14 +76,13 @@ public class LoadDataFileFaster {
                     loadBatchRya();
                 }
             }
-            
+
             @Override
             public void endRDF() throws RDFHandlerException {
                 loadBatchRya();
             }
 
-        
-            private void loadBatchRya() throws RDFHandlerException  {
+            private void loadBatchRya() throws RDFHandlerException {
                 try {
                     log.info("Loading Batch.  Size : " + statements.size());
                     dao.add(statements.iterator());
@@ -86,7 +93,6 @@ public class LoadDataFileFaster {
             }
         });
 
-        
         fileParser.parse(FileUtils.openInputStream(new File("/mydata/one_gig_ntrip_file.n3")), "");
         log.info("Done loading data into Rya");
 
