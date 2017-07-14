@@ -66,13 +66,15 @@ public class LoadDataFileFaster {
         RDFParser fileParser = Rio.createParser(RDFFormat.N3);
 
         fileParser.setRDFHandler(new RDFHandlerBase() {
+            private long startTime = System.currentTimeMillis();
+            private final int batchSize = 100_000;
 
             List<RyaStatement> statements = new ArrayList<>();
 
             @Override
             public void handleStatement(Statement st) throws RDFHandlerException {
                 statements.add(RdfToRyaConversions.convertStatement(st));
-                if (statements.size() == 100_000) {
+                if (statements.size() == batchSize) {
                     loadBatchRya();
                 }
             }
@@ -86,6 +88,12 @@ public class LoadDataFileFaster {
                 try {
                     log.info("Loading Batch.  Size : " + statements.size());
                     dao.add(statements.iterator());
+
+                    long currentTime = System.currentTimeMillis();
+                    double tripPerSec = batchSize / ((currentTime - startTime) / 1000.);
+                    log.info("Size : " + batchSize + " :: Rate : " + Math.round(tripPerSec));
+                    startTime = currentTime;
+
                 } catch (RyaDAOException e) {
                     throw new RDFHandlerException(e);
                 }

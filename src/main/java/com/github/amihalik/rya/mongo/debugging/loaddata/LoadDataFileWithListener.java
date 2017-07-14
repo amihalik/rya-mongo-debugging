@@ -15,6 +15,8 @@
 package com.github.amihalik.rya.mongo.debugging.loaddata;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
@@ -32,39 +34,42 @@ import org.openrdf.rio.helpers.RDFHandlerWrapper;
 import com.github.amihalik.rya.mongo.debugging.RyaUtil;
 
 /**
- * Uses the sail layer to load a N3 file.  Prints out the loading progress to the log.
+ * Uses the sail layer to load a N3 file. Prints out the loading progress to the
+ * log.
  */
 public class LoadDataFileWithListener {
     private static final Logger log = Logger.getLogger(LoadDataFileWithListener.class);
-
-
 
     public static void main(String[] args) throws Exception {
         log.info("Opening Connection to Rya");
         SailRepositoryConnection conn = RyaUtil.getSailRepo();
         log.info("Done Opening Connection to Rya");
-        
+
         log.info("Starting loading data into Rya");
         RDFParser fileParser = Rio.createParser(RDFFormat.N3);
-        
+
         RDFInserter rdfInserter = new RDFInserter(conn);
 
         RDFHandler countingRdfHandler = new RDFHandlerBase() {
-            
+            private long startTime = System.currentTimeMillis();
+            private final int batchSize = 100_000;
+
             private int count = 0;
 
             @Override
             public void handleStatement(Statement st) throws RDFHandlerException {
                 count++;
-                if (count % 100_000 == 0) {
-                    log.info("Size :: " + count);
+                if (count % batchSize == 0) {
+                    long currentTime = System.currentTimeMillis();
+                    double tripPerSec = batchSize / ((currentTime - startTime) / 1000.);
+                    log.info("Size : " + count + " :: Rate : " + Math.round(tripPerSec));
+                    startTime = currentTime;
                 }
             }
-        };            
+        };
 
-        
         fileParser.setRDFHandler(new RDFHandlerWrapper(rdfInserter, countingRdfHandler));
-        
+
         fileParser.parse(FileUtils.openInputStream(new File("/mydata/one_gig_ntrip_file.n3")), "");
         log.info("Done loading data into Rya");
 
