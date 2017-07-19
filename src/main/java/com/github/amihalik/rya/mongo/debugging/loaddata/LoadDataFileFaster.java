@@ -69,7 +69,7 @@ public class LoadDataFileFaster {
             private long startTime = System.currentTimeMillis();
             private final int batchSize = 100_000;
 
-            List<RyaStatement> statements = new ArrayList<>();
+            private final List<RyaStatement> statements = new ArrayList<>();
 
             @Override
             public void handleStatement(Statement st) throws RDFHandlerException {
