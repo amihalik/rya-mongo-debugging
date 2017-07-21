@@ -10,7 +10,7 @@ import org.openrdf.sail.Sail;
 
 public class RyaUtil {
     private static final Logger log = Logger.getLogger(RyaUtil.class);
-    
+
     private static String collectionName = "rya_";
     private static String tablePrefix = "rya_";
     private static String mongoInstance = "localhost";
@@ -23,27 +23,29 @@ public class RyaUtil {
 
         log.info("Connecting to Indexing Sail Repository.");
         final Sail extSail = GeoRyaSailFactory.getInstance(conf);
-        SailRepository repository = new SailRepository(extSail);
+        final SailRepository repository = new SailRepository(extSail);
 
         return repository.getConnection();
     }
 
     public static MongoDBRdfConfiguration getConf() {
-
         final MongoDBRdfConfiguration conf = new MongoDBRdfConfiguration();
         conf.setCollectionName(collectionName);
         conf.setTablePrefix(tablePrefix);
         conf.setMongoInstance(mongoInstance);
-        conf.setMongoPort(mongoPort);;
+        conf.setMongoPort(mongoPort);
         conf.setMongoDBName(mongoDbName);
         conf.setDisplayQueryPlan(displayQueryPlan);
         conf.setUseStats(false);
-        
-        conf.set("sc.useMongo", "true");
-        conf.set("sc.use_geo", "true");
+
+        conf.setBoolean("sc.useMongo", true);
+        conf.setBoolean("sc.use_geo", true);
         conf.set("sc.geo.predicates", "http://www.opengis.net/ont/geosparql#asWKT");
- 
-        
+
+        conf.setBoolean("rya.mongodb.dao.flusheachupdate", false);
+        conf.setInt("rya.mongodb.dao.batchwriter.size", 50000);
+        conf.setLong("rya.mongodb.dao.batchwriter.flushtime", 100L);
+
         return conf;
     }
 }
