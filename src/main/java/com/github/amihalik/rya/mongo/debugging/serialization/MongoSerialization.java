@@ -45,7 +45,7 @@ public class MongoSerialization {
             context = statement.getContext().stringValue();
         }
         String subject = statement.getSubject().stringValue();
-        String predicate = statement.getSubject().stringValue();
+        String predicate = statement.getPredicate().stringValue();
         String object ;
         String objectType;
 
