@@ -14,6 +14,7 @@
 
 package com.github.amihalik.rya.mongo.debugging.serialization;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -127,7 +128,7 @@ public class BatchLoadRya {
                 rya.close();
             }
         });
-        fileParser.parse(FileUtils.openInputStream(new File(FILE_NAME)), "");
+        fileParser.parse(new BufferedInputStream(FileUtils.openInputStream(new File(FILE_NAME))), "");
         log.info("Done loading data into Rya");
 
     }
