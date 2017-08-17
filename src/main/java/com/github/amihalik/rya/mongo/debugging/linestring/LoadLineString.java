@@ -28,28 +28,30 @@ public class LoadLineString {
         LineString two_five = createCircleLineString(new Coordinate(100, 250), 35, pointsInLineString);
         LineString three_zero = createCircleLineString(new Coordinate(100, 300), 35, pointsInLineString);
 
-        Geopanel.createGeoFrame(one_zero, one_five, two_zero, two_five, three_zero);
-
-        log.info("Opening Connection to Rya");
-        SailRepositoryConnection conn = RyaUtil.getSailRepo();
-        log.info("Done Opening Connection to Rya");
-
-        log.info("Starting loading data into Rya");
-        Statement s;
-        s = createStatement("one_zero", one_zero);
-        log.info("Loading Statement :: " + s);
-        conn.add(s);
-
-        s = createStatement("two_zero", two_zero);
-        log.info("Loading Statement :: " + s);
-        conn.add(s);
-
-        s = createStatement("three_zero", three_zero);
-        log.info("Loading Statement :: " + s);
-        conn.add(s);
-
-        log.info("Done loading data into Rya");
-
+//        Geopanel.createGeoFrame(one_zero, one_five, two_zero, two_five, three_zero);
+//
+//        log.info("Opening Connection to Rya");
+//        SailRepositoryConnection conn = RyaUtil.getSailRepo();
+//        log.info("Done Opening Connection to Rya");
+//
+//        log.info("Starting loading data into Rya");
+//        Statement s;
+//        s = createStatement("one_zero", one_zero);
+//        log.info("Loading Statement :: " + s);
+//        conn.add(s);
+//
+//        s = createStatement("two_zero", two_zero);
+//        log.info("Loading Statement :: " + s);
+//        conn.add(s);
+//
+//        s = createStatement("three_zero", three_zero);
+//        log.info("Loading Statement :: " + s);
+//        conn.add(s);
+//
+//        log.info("Done loading data into Rya");
+//        
+//        conn.close();
+        System.out.println(new Coordinate(100, 100));
     }
 
     public static Statement createStatement(String name, Geometry geo) {
