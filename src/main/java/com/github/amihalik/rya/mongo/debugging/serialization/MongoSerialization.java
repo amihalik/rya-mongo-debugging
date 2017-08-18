@@ -6,12 +6,16 @@ import java.util.List;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
+import org.apache.rya.api.domain.StatementMetadata;
+import org.apache.rya.mongodb.MongoDbRdfConstants;
+import org.apache.rya.mongodb.document.visibility.DocumentVisibilityAdapter;
 import org.bson.Document;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.vocabulary.XMLSchema;
 
+import com.mongodb.BasicDBObject;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Polygon;
@@ -38,9 +42,12 @@ public class MongoSerialization {
     public static final String DOCUMENT_VISIBILITY = "documentVisibility";
 
     private static final String GEO = "location";
+    
+    private static final String EMPTY_METADATA = StatementMetadata.EMPTY_METADATA.toString();
+    private static final List<?> EMPTY_VISIBILITY = new ArrayList<>();
 
     public static Document serialize(final Statement statement){
-        String context = null;
+        String context = "";
         if (statement.getContext() != null){
             context = statement.getContext().stringValue();
         }
@@ -60,7 +67,7 @@ public class MongoSerialization {
 
         }
         
-        byte[] id_bytes = hash256(subject + predicate + object + objectType + context);
+        byte[] id_bytes = hash256(subject  + " " + predicate  + " " + object  + " " + context);
 
         
         final Document doc = new Document(ID, id_bytes)
@@ -72,7 +79,10 @@ public class MongoSerialization {
             .append(OBJECT_HASH, hash32(object))
             .append(OBJECT_TYPE, objectType)
             .append(CONTEXT, context)
+            .append(STATEMENT_METADATA, EMPTY_METADATA)
+            .append(DOCUMENT_VISIBILITY, EMPTY_VISIBILITY)
             .append(TIMESTAMP, System.currentTimeMillis());
+
         
         //append geo
         if (objectType.equals("http://www.opengis.net/ont/geosparql#wktLiteral")) {

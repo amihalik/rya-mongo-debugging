@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.FileUtils;
@@ -33,8 +34,11 @@ import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.Rio;
 import org.openrdf.rio.helpers.RDFHandlerBase;
 
+import com.google.common.base.Stopwatch;
+import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -43,7 +47,7 @@ import com.mongodb.client.model.InsertManyOptions;
 public class BatchLoadRya {
     private static final Logger log = Logger.getLogger(BatchLoadRya.class);
 
-    private static final String DB_NAME = "rya_exp_3";
+    private static final String DB_NAME = "rya_exp";
     private static final String COL_NAME = DB_NAME + "__triples";
 
     private static final String FILE_NAME = "/mydata/one_gig_ntrip_file_12.brf";
@@ -51,7 +55,7 @@ public class BatchLoadRya {
     private static final String HOST = "localhost";
     private static final int PORT = 27017;
 
-    private static final int THREAD_COUNT = 4;
+    private static final int THREAD_COUNT = 2;
 
     private final int BATCH_SIZE = 1_000_000;
 
@@ -85,21 +89,41 @@ public class BatchLoadRya {
         }
     }
 
-    private void loadintorya(final List<Statement> statements) {
+    private void loadintorya(final List<Statement> sts) {
         try {
             semaphore.acquire();
             executor.execute(() -> {
                 MongoDatabase db = client.getDatabase(DB_NAME);
                 final MongoCollection<Document> coll = db.getCollection(COL_NAME);
 
+                Stopwatch sw = new Stopwatch();
+                sw.start();
                 List<Document> documents = new ArrayList<>();
-                for (Statement s : statements) {
+                for (Statement s : sts) {
                     Document d = MongoSerialization.serialize(s);
                     documents.add(d);
                 }
-                coll.insertMany(documents, bws);
-                int size = totalstatements.addAndGet(statements.size());
-                System.out.println("TOTAL STATEMENTS ::" + size);
+
+                long serMilli = sw.elapsed(TimeUnit.MILLISECONDS);
+
+                sw.reset();
+                sw.start();
+                try {
+                    coll.insertMany(documents, bws);
+                    long insertMilli = sw.elapsed(TimeUnit.MILLISECONDS);
+
+                    int totalsize = totalstatements.addAndGet(sts.size());
+                    int insertsize = sts.size();
+                    log.info(String.format("TOTAL STATEMENTS :: %,d\t Serialization Rate :: %,d\t Insert Rate :: %,d\t", totalsize,
+                            (int) (insertsize * 1000. / serMilli), (int) (insertsize * 1000. / insertMilli)));
+                } catch (MongoBulkWriteException e) {
+                    log.error("Bulk Write Error loading data into Mongo.  First Message :: " + e.getWriteErrors().get(0).getMessage() + ". "
+                            + e.getWriteErrors().size() + " total errors");
+                } catch (MongoException e) {
+                    log.error("Error loading data into Mongo");
+                    e.printStackTrace();
+                }
+
                 semaphore.release();
             });
         } catch (InterruptedException e) {
@@ -112,7 +136,14 @@ public class BatchLoadRya {
     public void close() {
         loadintorya(new ArrayList<>(statements));
         statements.clear();
-        client.close();
+        // wait until all threads have finished writing
+        try {
+            semaphore.acquire(THREAD_COUNT);
+            client.close();
+        } catch (InterruptedException e) {
+            log.error("Mongo Client not closed properly");
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -123,6 +154,7 @@ public class BatchLoadRya {
             public void handleStatement(Statement st) throws RDFHandlerException {
                 rya.loadStatement(st);
             }
+
             @Override
             public void endRDF() throws RDFHandlerException {
                 rya.close();
