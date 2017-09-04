@@ -48,7 +48,7 @@ public class FuzzData {
     private static final ValueFactory vf = new ValueFactoryImpl();
     private static final WKTWriter ww = new WKTWriter();
 
-    private static Statement fuzzStatement(Statement s, int id) throws Exception {
+    public static Statement fuzzStatement(Statement s, int id) throws Exception {
         if (id == 0) {
             return s;
         }
@@ -82,7 +82,7 @@ public class FuzzData {
 
     public static void main(String[] args) throws Exception {
         final RDFParser fileParser = Rio.createParser(RDFFormat.N3);
-        final RDFWriter fileWriter = Rio.createWriter(RDFFormat.BINARY, new BufferedOutputStream(new FileOutputStream("/mydata/one_gig_ntrip_file_12.brf")));
+        //final RDFWriter fileWriter = Rio.createWriter(RDFFormat.BINARY, new BufferedOutputStream(new FileOutputStream("/mydata/one_gig_ntrip_file_12.brf")));
         
         fileParser.setRDFHandler(new RDFHandlerBase() {
             private int count = 0;

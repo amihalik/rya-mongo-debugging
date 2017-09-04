@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 import org.bson.Document;
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFFormat;
+import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.Rio;
@@ -49,8 +50,6 @@ public class BatchLoadRya {
 
     private static final String DB_NAME = "rya_exp";
     private static final String COL_NAME = DB_NAME + "__triples";
-
-    private static final String FILE_NAME = "/mydata/one_gig_ntrip_file_12.brf";
 
     private static final String HOST = "localhost";
     private static final int PORT = 27017;
@@ -146,10 +145,9 @@ public class BatchLoadRya {
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    public static RDFHandler newHandler() throws Exception {
         BatchLoadRya rya = new BatchLoadRya();
-        RDFParser fileParser = Rio.createParser(RDFFormat.BINARY);
-        fileParser.setRDFHandler(new RDFHandlerBase() {
+        return new RDFHandlerBase() {
             @Override
             public void handleStatement(Statement st) throws RDFHandlerException {
                 rya.loadStatement(st);
@@ -159,8 +157,22 @@ public class BatchLoadRya {
             public void endRDF() throws RDFHandlerException {
                 rya.close();
             }
-        });
+        };
+    }
+
+    public static void main(String[] args) throws Exception {
+        RDFParser fileParser = Rio.createParser(RDFFormat.N3);
+        
+        RDFHandler rya = BatchLoadRya.newHandler();
+        RDFHandler counter = new RdfHandlerCounter(rya);
+        RDFHandler fuzzer = new RdfHandlerFuzzer(rya, 12);
+
+        fileParser.setRDFHandler(fuzzer);
+        
         fileParser.parse(new BufferedInputStream(FileUtils.openInputStream(new File(FILE_NAME))), "");
+
+        
+        
         log.info("Done loading data into Rya");
 
     }
