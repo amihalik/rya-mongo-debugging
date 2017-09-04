@@ -46,7 +46,16 @@ public class MongoSerialization {
     private static final String EMPTY_METADATA = StatementMetadata.EMPTY_METADATA.toString();
     private static final List<?> EMPTY_VISIBILITY = new ArrayList<>();
 
-    public static Document serialize(final Statement statement){
+    
+    private final boolean addHash;
+    private final boolean addGeo;
+    
+    public MongoSerialization(boolean addHash, boolean addGeo) {
+        this.addHash = addHash;
+        this.addGeo = addGeo;
+    }
+    
+    public Document serialize(final Statement statement){
         String context = "";
         if (statement.getContext() != null){
             context = statement.getContext().stringValue();
@@ -72,20 +81,22 @@ public class MongoSerialization {
         
         final Document doc = new Document(ID, id_bytes)
             .append(SUBJECT, subject)
-            .append(SUBJECT_HASH, hash32(subject))
             .append(PREDICATE, predicate)
-            .append(PREDICATE_HASH, hash32(predicate))
             .append(OBJECT, object)
-            .append(OBJECT_HASH, hash32(object))
             .append(OBJECT_TYPE, objectType)
             .append(CONTEXT, context)
             .append(STATEMENT_METADATA, EMPTY_METADATA)
             .append(DOCUMENT_VISIBILITY, EMPTY_VISIBILITY)
             .append(TIMESTAMP, System.currentTimeMillis());
 
+        if (addHash) {
+            doc.append(SUBJECT_HASH, hash32(subject));
+            doc.append(PREDICATE_HASH, hash32(predicate));
+            doc.append(OBJECT_HASH, hash32(object));
+        }
         
         //append geo
-        if (objectType.equals("http://www.opengis.net/ont/geosparql#wktLiteral")) {
+        if (addGeo && objectType.equals("http://www.opengis.net/ont/geosparql#wktLiteral")) {
             try {
                 Geometry geo = (new WKTReader()).read(object);
                 if(geo == null) {

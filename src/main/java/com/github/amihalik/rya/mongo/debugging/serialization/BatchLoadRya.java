@@ -48,13 +48,10 @@ import com.mongodb.client.model.InsertManyOptions;
 public class BatchLoadRya {
     private static final Logger log = Logger.getLogger(BatchLoadRya.class);
 
-    private static final String DB_NAME = "rya_exp";
-    private static final String COL_NAME = DB_NAME + "__triples";
-
     private static final String HOST = "localhost";
     private static final int PORT = 27017;
 
-    private static final int THREAD_COUNT = 2;
+    private static final int THREAD_COUNT = 4;
 
     private final int BATCH_SIZE = 1_000_000;
 
@@ -66,8 +63,17 @@ public class BatchLoadRya {
 
     final MongoClient client;
 
-    public BatchLoadRya() throws Exception {
-        log.info("Opening Connection to Rya");
+    private final String dbName;
+    private final String colName;
+
+    private final MongoSerialization serializer;
+
+    public BatchLoadRya(String dbName, String colName, MongoSerialization serializer) throws Exception {
+        this.serializer = serializer;
+        this.dbName = dbName;
+        this.colName = colName;
+
+        log.info("Opening Connection to Mongo");
 
         ServerAddress server = new ServerAddress(HOST, PORT);
         client = new MongoClient(server, MongoClientOptions.builder().minConnectionsPerHost(THREAD_COUNT).build());
@@ -92,14 +98,14 @@ public class BatchLoadRya {
         try {
             semaphore.acquire();
             executor.execute(() -> {
-                MongoDatabase db = client.getDatabase(DB_NAME);
-                final MongoCollection<Document> coll = db.getCollection(COL_NAME);
+                MongoDatabase db = client.getDatabase(dbName);
+                final MongoCollection<Document> coll = db.getCollection(colName);
 
                 Stopwatch sw = new Stopwatch();
                 sw.start();
                 List<Document> documents = new ArrayList<>();
                 for (Statement s : sts) {
-                    Document d = MongoSerialization.serialize(s);
+                    Document d = serializer.serialize(s);
                     documents.add(d);
                 }
 
@@ -145,8 +151,8 @@ public class BatchLoadRya {
         }
     }
 
-    public static RDFHandler newHandler() throws Exception {
-        BatchLoadRya rya = new BatchLoadRya();
+    public static RDFHandler newHandler(String dbName, String colName, MongoSerialization serializer) throws Exception {
+        BatchLoadRya rya = new BatchLoadRya(dbName, colName, serializer);
         return new RDFHandlerBase() {
             @Override
             public void handleStatement(Statement st) throws RDFHandlerException {
@@ -161,18 +167,23 @@ public class BatchLoadRya {
     }
 
     public static void main(String[] args) throws Exception {
+        boolean addHash = true;
+        boolean addGeo = true;
+        String dbName = "04_rya_hash";
+        String colName = "all";
+
+        MongoSerialization serializer = new MongoSerialization(addHash, addGeo);
+
         RDFParser fileParser = Rio.createParser(RDFFormat.N3);
-        
-        RDFHandler rya = BatchLoadRya.newHandler();
+
+        RDFHandler rya = BatchLoadRya.newHandler(dbName, colName, serializer);
         RDFHandler counter = new RdfHandlerCounter(rya);
-        RDFHandler fuzzer = new RdfHandlerFuzzer(rya, 12);
+        RDFHandler fuzzer = new RdfHandlerFuzzer(counter, 12);
 
         fileParser.setRDFHandler(fuzzer);
-        
-        fileParser.parse(new BufferedInputStream(FileUtils.openInputStream(new File(FILE_NAME))), "");
 
-        
-        
+        fileParser.parse(new BufferedInputStream(FileUtils.openInputStream(new File("~/Downloads/ntm_output1.n3"))), "");
+
         log.info("Done loading data into Rya");
 
     }
