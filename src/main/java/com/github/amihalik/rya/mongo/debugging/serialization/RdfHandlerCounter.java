@@ -39,7 +39,7 @@ public class RdfHandlerCounter implements RDFHandler {
     public void handleStatement(Statement st) throws RDFHandlerException {
         count++;
         if (count % 1_000_000 == 0) {
-            log.info(numberFormat.format(count + " statements written"));
+            log.info(numberFormat.format(count) + " statements written");
         }
         inner.handleStatement(st);
 

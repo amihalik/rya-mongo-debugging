@@ -167,6 +167,8 @@ public class BatchLoadRya {
     }
 
     public static void main(String[] args) throws Exception {
+        String filename = "/Users/mihalik/Downloads/ntm_output1.n3";
+
         boolean addHash = true;
         boolean addGeo = true;
         String dbName = "04_rya_hash";
@@ -182,7 +184,7 @@ public class BatchLoadRya {
 
         fileParser.setRDFHandler(fuzzer);
 
-        fileParser.parse(new BufferedInputStream(FileUtils.openInputStream(new File("~/Downloads/ntm_output1.n3"))), "");
+        fileParser.parse(new BufferedInputStream(FileUtils.openInputStream(new File(filename))), "");
 
         log.info("Done loading data into Rya");
 
